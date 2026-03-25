@@ -1,0 +1,9 @@
+{
+  "name": "Kumuda Shruti",
+  "github_id": "uxvcitewa",
+  "val_bpb": null,
+  "architecture": "Phoneme LM inspired by Siri Bhoovalaya + Carnatic Music",
+  "summary": "64-symbol Chakra tokenizer + 4-thread Carnatic Tala threading + Int8 quantized GRU+Attention backbone. In honor of Kumudendu Muni, 9th century Karnataka.",
+  "date": "2026-03-25",
+  "track": "10min_16mb"
+}
