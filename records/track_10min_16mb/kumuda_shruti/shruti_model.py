@@ -84,14 +84,12 @@ class BandhaAttention(nn.Module):
         q: (batch, n_heads, seq_len, head_dim)
         """
         B, H, T, D = q.shape
+        q = q.clone()  # avoid inplace on view
         for h in range(H):
             cycle = self.head_cycles[h]
-            # Phase position for each token
-            phases = torch.arange(T, device=q.device) % cycle  # (T,)
-            # Gate values for this head's cycle
-            gates = self.bandha_gate[h, :cycle]  # (cycle,)
-            gate_vals = gates[phases]  # (T,) — one gate per position
-            gate_vals = torch.sigmoid(gate_vals)  # keep in (0,1)
+            phases = torch.arange(T, device=q.device) % cycle
+            gates = self.bandha_gate[h, :cycle]
+            gate_vals = torch.sigmoid(gates[phases])
             q[:, h] = q[:, h] * gate_vals.view(1, T, 1)
         return q
 
