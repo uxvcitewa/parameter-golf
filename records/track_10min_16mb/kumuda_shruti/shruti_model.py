@@ -80,18 +80,20 @@ class BandhaAttention(nn.Module):
 
     def _bandha_modulate(self, q: torch.Tensor, seq_len: int) -> torch.Tensor:
         """
-        Modulate queries by Tala phase gate.
+        Modulate queries by Tala phase gate — fully out-of-place.
         q: (batch, n_heads, seq_len, head_dim)
         """
         B, H, T, D = q.shape
-        q = q.clone()  # avoid inplace on view
+        gates_list = []
         for h in range(H):
             cycle = self.head_cycles[h]
             phases = torch.arange(T, device=q.device) % cycle
             gates = self.bandha_gate[h, :cycle]
-            gate_vals = torch.sigmoid(gates[phases])
-            q[:, h] = q[:, h] * gate_vals.view(1, T, 1)
-        return q
+            gate_vals = torch.sigmoid(gates[phases])  # (T,)
+            gates_list.append(gate_vals.view(1, 1, T, 1))
+        # Stack all gates: (1, n_heads, T, 1)
+        all_gates = torch.cat(gates_list, dim=1)
+        return q * all_gates
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """x: (batch, seq_len, dim)"""
@@ -103,8 +105,8 @@ class BandhaAttention(nn.Module):
                     .transpose(1, 2) for t in qkv]
         # q,k,v: (B, n_heads, T, head_dim)
 
-        # Bandha modulation on queries
-        q = self._bandha_modulate(q, T)
+        # Bandha modulation on queries (out-of-place)
+        q = self._bandha_modulate(q.clone(), T)
 
         # Causal attention
         scores = torch.matmul(q, k.transpose(-2, -1)) / self.scale
